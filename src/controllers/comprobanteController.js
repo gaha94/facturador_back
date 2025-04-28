@@ -113,9 +113,20 @@ export const obtenerComprobante = async (req, res) => {
     const comprobante = rows[0]
     const productos = rows
 
-    const tipoDocumentoCliente = '6' // 6 = RUC (podrías hacer dinámico si tuvieras DNI)
-    const qrData = `${comprobante.ruc}|01|${comprobante.serie}|${comprobante.numero}|${comprobante.total_documento}|${comprobante.total_igv}|${comprobante.fecha_emision}|${tipoDocumentoCliente}|${comprobante.ruc}`
+    // Asumimos que 'comprobante.ruc' es del cliente
+    let tipoDocumentoCliente = '';
 
+    if (comprobante.ruc.length === 8) {
+      tipoDocumentoCliente = '1'; // DNI
+    } else if (comprobante.ruc.length === 11) {
+      tipoDocumentoCliente = '6'; // RUC
+    } else {
+      tipoDocumentoCliente = '0'; // Otro tipo desconocido (opcional manejar error)
+    }
+
+    const rucEmisor = '20486293692'; // tu RUC de empresa
+    const qrData = `${rucEmisor}|${comprobante.tipo_documento}|${comprobante.serie}|${comprobante.numero}|${comprobante.total_documento.toFixed(2)}|${comprobante.total_igv.toFixed(2)}|${comprobante.fecha_emision}|${tipoDocumentoCliente}|${comprobante.ruc}`;    
+    
     const montoEnLetras = numeroALetras(parseFloat(comprobante.total_documento));
 
     const tipoDescripcion = {
@@ -135,7 +146,7 @@ export const obtenerComprobante = async (req, res) => {
     <tr>
       <td style="width: 70%; vertical-align: top;">
         <div style="text-align: left;">
-          <img src="http://localhost:3000/public/logo.png" alt="Logo" style="height: 50px; margin-bottom: 10px;">
+          <img src="http://localhost:3000/public/image.png" alt="Logo" style="height: 50px; margin-bottom: 10px;">
           <h4><strong>COMERCIAL SPLANA E.I.R.L.</strong></h4>
           <p><strong>Principal:</strong> Calle Real 261, Junín, Perú</p>
           <p><strong>Tlf.:</strong> (064) 216665</p>
@@ -201,16 +212,12 @@ export const obtenerComprobante = async (req, res) => {
 
   <p><strong>SON:</strong> ${montoEnLetras}</p>
 
-  <h4 style="margin-top: 30px;">Cuentas Bancarias:</h4>
-  <p>Banco BBVA: 0011-0307-02-00002023 (Soles)</p>
-  <p>Banco Interbank: 0011-0307-02-00002279 (Soles)</p>
-
   <div style="text-align: center; margin-top: 40px; page-break-inside: avoid;">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}" alt="Código QR">
     <p style="font-size: 10px; color: #888;">Escanee el código para ver la representación electrónica</p>
   </div>
   <p style="text-align: center; margin-top: 20px; font-size: 10px; color: #888;">
-    Representación impresa de la FACTURA ELECTRÓNICA.  
+    Representación impresa de ${tipoTexto}.  
   </p>
 </body>
       </html>
@@ -224,16 +231,16 @@ export const obtenerComprobante = async (req, res) => {
       format: 'A4',
       printBackground: true,
       displayHeaderFooter: true,
-      headerTemplate: '<span></span>',  // Dejar vacío el header
+      headerTemplate: '<div></div>',  // header vacío obligatorio
       footerTemplate: `
         <div style="font-size:10px; width:100%; text-align:center; color: #666; padding:10px 0;">
-          Página {{pageNumber}} de {{totalPages}}
+          Página <span class="pageNumber"></span> de <span class="totalPages"></span>
         </div>
       `,
       margin: {
         top: '20px',
         right: '20px',
-        bottom: '60px', /* 💡 Aumentamos margen inferior para que el footer no tape contenido */
+        bottom: '60px',
         left: '20px'
       }
     })
